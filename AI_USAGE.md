@@ -47,25 +47,6 @@ conversation.
   recovered-strings panel, scanning decoded content, corrected MITRE
   mappings), working from the list of changes I chose.
 
-## What the prompting actually looked like
-
-The spec was the master prompt: I wrote it, handed it to the assistant, and
-asked for one working slice at a time. The steering in between happened in
-short, plain messages. Two real ones, typos and all:
-
-> "lets just focus on excle macros then"
-
-That single line is the scope cut that turned a three-language plan into one
-deep VBA tool. The exchange it kicked off is still preserved at the tail of
-`triagescript_spec.md`.
-
-> "lets fix all then, for the ai prmpt documentaiton, check the way we did it
-> in tool2 and tool 1, humanize the wordings, dont sound robotic"
-
-That one produced the v1.1 update and this very document. The pattern was the
-same throughout: the assistant proposes and drafts, I decide what ships and
-how it sounds.
-
 ## How I verified it
 
 - Ran the CLI and the web UI against `sample.docm` before and after the v1.1
