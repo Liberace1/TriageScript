@@ -12,15 +12,12 @@ shipped that I didn't run and check myself.
 
 ## The spec came first
 
-`triagescript_spec.md` is my design document, and I left it in the repo on
-purpose. It is the honest record of what I asked for, from both myself and
-the assistant. It is also where the most important decision of the project is
-visible: the original plan covered PowerShell, JavaScript, and VBA analyzers.
-Partway through I cut that down to Office VBA macros only, because three
-half-deep analyzers in one course cycle would have made a worse tool than one
-deep one, and macro-laden Office documents are what actually lands in a
-phishing queue. The tail end of the spec still shows that scoping
-conversation.
+`triagescript_spec.md` is my design document, kept in the repo on purpose.
+The original plan covered PowerShell, JavaScript, and VBA analyzers. I cut
+that down to Office VBA macros only: one deep analyzer beats three shallow
+ones in a single course cycle, and macro-laden Office documents are what
+actually lands in a phishing queue. The scoping conversation is still at the
+tail of the spec.
 
 ## What was mine
 
