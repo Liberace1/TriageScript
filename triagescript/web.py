@@ -116,8 +116,8 @@ def _page(body: str) -> bytes:
         "<span class='badge'><b>Zero-execution</b> &middot; read-only parse</span>"
         "<span class='badge'><b>Local only</b> &middot; 127.0.0.1</span>"
         "</div>" + body +
-        "<div class='footnote'>TriageScript &middot; CSC-842 &middot; analyzes and explains &mdash; never runs the macro<br>"
-        "Detection is pattern-based &mdash; a LOW score is not proof of safety; novel obfuscation may go unflagged.</div>"
+        "<div class='footnote'>TriageScript &middot; CSC-842 &middot; analyzes and explains, never runs the macro<br>"
+        "Detection is pattern-based; a LOW score is not proof of safety and novel obfuscation may go unflagged.</div>"
         "</div></body></html>"
     )
     return doc.encode("utf-8")
