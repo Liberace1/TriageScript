@@ -90,6 +90,19 @@ def decode_base64_literals(code: str) -> list[str]:
     return sorted(decoded)
 
 
+def extract_decoded_strings(code: str) -> list[str]:
+    """Only strings that required actual decoding (Chr arrays, StrReverse, Base64).
+
+    Plain string literals are excluded here so their mere presence is never
+    reported as obfuscation; use extract_recovered_strings for the full list.
+    """
+    results: set[str] = set()
+    results.update(decode_chr_sequences(code))
+    results.update(decode_reversed_strings(code))
+    results.update(decode_base64_literals(code))
+    return sorted(value for value in results if value.strip())
+
+
 def extract_recovered_strings(code: str) -> list[str]:
     results: set[str] = set()
     results.update(decode_chr_sequences(code))

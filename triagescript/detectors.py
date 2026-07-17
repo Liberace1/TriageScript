@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from triagescript.attack_map import TECHNIQUE_NAMES
-from triagescript.decode import extract_recovered_strings
 
 
 def _compile(pattern: str, flags: int = re.IGNORECASE) -> re.Pattern[str]:
@@ -39,6 +38,34 @@ DOWNLOAD_PATTERNS = [
     _compile(r'curl\s', re.I),
     _compile(r'power(?:shell|sh)\b', re.I),
 ]
+EVAL_PATTERNS = [
+    _compile(r'\bEval(?:uate)?\s*\('),
+    _compile(r'\bExecute(?:Global)?\s*\('),
+    _compile(r'\bCallByName\s*\('),
+    _compile(r'Application\.Run\b'),
+    _compile(r'ExecuteExcel4Macro'),
+    _compile(r'ScriptControl'),
+]
+FILE_WRITE_PATTERNS = [
+    _compile(r'Scripting\.FileSystemObject'),
+    _compile(r'\.SaveToFile\b'),
+    _compile(r'\.CreateTextFile\b'),
+    _compile(r'\bOpen\s+.+\s+For\s+Binary'),
+]
+REGISTRY_PATTERNS = [
+    _compile(r'\.RegWrite\b'),
+    _compile(r'CurrentVersion\\+Run'),
+    _compile(r'\bStartup\s+Folder', re.I),
+]
+RECON_PATTERNS = [
+    _compile(r'\bEnviron\$?\s*\('),
+    _compile(r'Application\.UserName'),
+    _compile(r'\bComputerName\b'),
+]
+EVASION_PATTERNS = [
+    _compile(r'Application\.Wait'),
+    _compile(r'\bSleep\b'),
+]
 OBFUSCATION_PATTERNS = [
     _compile(r'Chr\b'),
     _compile(r'StrReverse\b'),
@@ -59,11 +86,18 @@ def _make_hit(technique_id: str, description: str, score: int, indicator: str | 
     )
 
 
+def _first_match(patterns: list[re.Pattern[str]], code: str) -> re.Pattern[str] | None:
+    for pattern in patterns:
+        if pattern.search(code):
+            return pattern
+    return None
+
+
 def detect_autoexec(code: str) -> list[DetectorHit]:
     if AUTOEXEC_PATTERN.search(code):
         return [
             _make_hit(
-                "T1546.001",
+                "T1204.002",
                 "Autoexec VBA macro trigger detected.",
                 20,
                 "AutoOpen/Workbook_Open/Document_Open",
@@ -73,16 +107,16 @@ def detect_autoexec(code: str) -> list[DetectorHit]:
 
 
 def detect_suspicious_shell(code: str) -> list[DetectorHit]:
-    for pattern in SHELL_PATTERNS:
-        if pattern.search(code):
-            return [
-                _make_hit(
-                    "T1059.007",
-                    "Suspicious shell or scripting host activity detected.",
-                    25,
-                    pattern.pattern,
-                )
-            ]
+    pattern = _first_match(SHELL_PATTERNS, code)
+    if pattern:
+        return [
+            _make_hit(
+                "T1059.005",
+                "Suspicious shell or scripting host activity detected.",
+                25,
+                pattern.pattern,
+            )
+        ]
     return []
 
 
@@ -99,6 +133,93 @@ def detect_download_chain(code: str) -> list[DetectorHit]:
             )
         ]
     return []
+
+
+def detect_dynamic_execution(code: str) -> list[DetectorHit]:
+    pattern = _first_match(EVAL_PATTERNS, code)
+    if pattern:
+        return [
+            _make_hit(
+                "T1059.005",
+                "Dynamic code evaluation detected (Eval/Execute/CallByName style).",
+                20,
+                pattern.pattern,
+            )
+        ]
+    return []
+
+
+def detect_file_write(code: str) -> list[DetectorHit]:
+    pattern = _first_match(FILE_WRITE_PATTERNS, code)
+    if pattern:
+        return [
+            _make_hit(
+                "T1105",
+                "File write or payload staging capability detected.",
+                10,
+                pattern.pattern,
+            )
+        ]
+    return []
+
+
+def detect_registry_persistence(code: str) -> list[DetectorHit]:
+    pattern = _first_match(REGISTRY_PATTERNS, code)
+    if pattern:
+        return [
+            _make_hit(
+                "T1547.001",
+                "Registry or startup persistence behavior detected.",
+                20,
+                pattern.pattern,
+            )
+        ]
+    return []
+
+
+def detect_environment_recon(code: str) -> list[DetectorHit]:
+    pattern = _first_match(RECON_PATTERNS, code)
+    if pattern:
+        return [
+            _make_hit(
+                "T1082",
+                "Host or user environment reconnaissance detected.",
+                5,
+                pattern.pattern,
+            )
+        ]
+    return []
+
+
+def detect_sandbox_evasion(code: str) -> list[DetectorHit]:
+    pattern = _first_match(EVASION_PATTERNS, code)
+    if pattern:
+        return [
+            _make_hit(
+                "T1497.003",
+                "Time-based delay that may be sandbox evasion detected.",
+                10,
+                pattern.pattern,
+            )
+        ]
+    return []
+
+
+def run_behavior_detectors(code: str) -> list[DetectorHit]:
+    """All content-based detectors (everything except autoexec and obfuscation).
+
+    Safe to run over both the raw macro source and the decoded/recovered
+    strings, so behavior hidden inside obfuscated payloads still scores.
+    """
+    hits: list[DetectorHit] = []
+    hits.extend(detect_suspicious_shell(code))
+    hits.extend(detect_download_chain(code))
+    hits.extend(detect_dynamic_execution(code))
+    hits.extend(detect_file_write(code))
+    hits.extend(detect_registry_persistence(code))
+    hits.extend(detect_environment_recon(code))
+    hits.extend(detect_sandbox_evasion(code))
+    return hits
 
 
 def detect_obfuscation(code: str, recovered: list[str]) -> list[DetectorHit]:

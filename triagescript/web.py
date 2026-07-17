@@ -30,7 +30,7 @@ VERDICT_STYLE = {
     "CRITICAL": ("#ff4d4f", "Do not open. Escalate."),
     "HIGH":     ("#ff922b", "Treat as malicious."),
     "MEDIUM":   ("#fcc419", "Suspicious - investigate."),
-    "LOW":      ("#51cf66", "No strong indicators."),
+    "LOW":      ("#51cf66", "No known-pattern indicators - not proof of safety."),
 }
 
 PAGE_CSS = """
@@ -73,6 +73,14 @@ h1 { font-size:26px; margin:0; letter-spacing:.3px; }
 .reason .desc { flex:1; }
 .reason .ind { display:block; color:#6e7681; font-size:12px; font-family:Consolas,monospace; margin-top:3px; word-break:break-all; }
 .tid { font-size:11px; padding:2px 8px; border-radius:6px; background:#1f2937; color:#9fb0c0; white-space:nowrap; height:fit-content; }
+.sfilter { width:100%; padding:8px 10px; border-radius:8px; border:1px solid #30363d; background:#0d1117;
+           color:#e6edf3; font-family:Consolas,monospace; font-size:13px; margin-bottom:10px; }
+.sfilter:focus { outline:none; border-color:#58a6ff; }
+.slist { max-height:280px; overflow:auto; border:1px solid #21262d; border-radius:10px; }
+.sitem { padding:6px 10px; border-top:1px solid #21262d; font-family:Consolas,monospace;
+         font-size:12.5px; word-break:break-all; }
+.sitem:first-child { border-top:0; }
+.shint { color:#6e7681; font-size:12px; margin:8px 0 0; }
 table.ioc { width:100%; border-collapse:collapse; font-size:14px; }
 table.ioc td { padding:8px 10px; border-top:1px solid #21262d; font-family:Consolas,monospace; }
 table.ioc td.k { color:#8b949e; width:60px; text-transform:uppercase; font-size:11px; letter-spacing:1px; }
@@ -90,6 +98,11 @@ pre { background:#0d1117; border:1px solid #21262d; border-radius:10px; padding:
 """
 
 
+def _printable(text: str) -> str:
+    """Make a recovered string render-safe (decoded bytes can contain control chars)."""
+    return "".join(ch if ch.isprintable() else "." for ch in text)
+
+
 def _page(body: str) -> bytes:
     doc = (
         "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
@@ -103,7 +116,8 @@ def _page(body: str) -> bytes:
         "<span class='badge'><b>Zero-execution</b> &middot; read-only parse</span>"
         "<span class='badge'><b>Local only</b> &middot; 127.0.0.1</span>"
         "</div>" + body +
-        "<div class='footnote'>TriageScript &middot; CSC-842 &middot; analyzes and explains &mdash; never runs the macro</div>"
+        "<div class='footnote'>TriageScript &middot; CSC-842 &middot; analyzes and explains &mdash; never runs the macro<br>"
+        "Detection is pattern-based &mdash; a LOW score is not proof of safety; novel obfuscation may go unflagged.</div>"
         "</div></body></html>"
     )
     return doc.encode("utf-8")
@@ -167,6 +181,26 @@ def render_result(result, filename: str) -> bytes:
         f"<table class='ioc'>{ioc_rows}</table></div>" if ioc_rows else ""
     )
 
+    strings_card = ""
+    recovered = result.recovered or []
+    if recovered:
+        items = "".join(
+            f"<div class='sitem'>{html.escape(_printable(text))}</div>" for text in recovered
+        )
+        strings_card = (
+            "<div class='card'><p class='sect-title'>Recovered strings "
+            f"({len(recovered)})</p>"
+            "<input class='sfilter' id='sfilter' type='text' placeholder='Filter strings...'>"
+            f"<div class='slist' id='slist'>{items}</div>"
+            "<p class='shint'>Every string literal and decoded value recovered from the macro - "
+            "shown even when it did not affect the score, so you can judge it yourself.</p>"
+            "<script>"
+            "const sf=document.getElementById('sfilter'),sl=document.getElementById('slist');"
+            "sf.addEventListener('input',()=>{const q=sf.value.toLowerCase();"
+            "for(const el of sl.children){el.style.display=el.textContent.toLowerCase().includes(q)?'':'none';}});"
+            "</script></div>"
+        )
+
     chips = ""
     for tid in (result.techniques or []):
         name = TECHNIQUE_NAMES.get(tid, "Unknown technique")
@@ -193,7 +227,7 @@ def render_result(result, filename: str) -> bytes:
         f"<div class='scale'><span>0</span><span>score {result.score}/{result.max_score}</span><span>100</span></div>"
         "</div>"
         "<div class='card'><p class='sect-title'>Why</p>" + reasons + "</div>"
-        + ioc_card + attack_card + source_card +
+        + ioc_card + strings_card + attack_card + source_card +
         "<a class='back' href='/'>&larr; Analyze another file</a>"
     )
     return _page(body)
