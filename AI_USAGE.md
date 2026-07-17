@@ -1,23 +1,13 @@
 # AI Usage - TriageScript
 
 This records where AI assistance was used in building TriageScript, what I
-directed and decided myself, and how I verified the result. The repo includes
-`triagescript_spec.md`, which can read like an unexplained AI prompt, so this
-file also explains what that is.
+directed and decided myself, and how I verified the result.
 
-The short version: this was a mixed build. I designed the tool, wrote the
-spec, and made every call that shaped it. I wrote parts of the code by hand
-and used an AI coding assistant to scaffold others from the spec. Nothing
-shipped that I didn't run and check myself.
-
-## The spec came first
-
-`triagescript_spec.md` is my design document, kept in the repo on purpose.
-The original plan covered PowerShell, JavaScript, and VBA analyzers. I cut
-that down to Office VBA macros only: one deep analyzer beats three shallow
-ones in a single course cycle, and macro-laden Office documents are what
-actually lands in a phishing queue. The scoping conversation is still at the
-tail of the spec.
+The short version: this was a mixed build. I wrote the design spec
+(`triagescript_spec.md`, kept in the repo) and made every call that shaped
+the tool. I wrote parts of the code by hand and used an AI coding assistant
+to scaffold others from the spec. Nothing shipped that I didn't run and
+check myself.
 
 ## What was mine
 
